@@ -1,0 +1,39 @@
+# OS/editor
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+
+# Virtual env (project-local)
+.venv/
+venv/
+ENV/
+
+# Project artifacts
+models/
+outputs/
+checkpoints/
+*.sqlite
+*.db
+
+# Media (keep repo small)
+*.mp3
+*.wav
+*.flac
+
+# Data: ignore bulky dirs; allow small samples
+data/raw/
+data/interim/
+data/processed/
+
+# Allow whitelisted small samples (commit if needed)
+!data/samples/**
+
+# Allow committing all data in this project (override ignores above)
+!data/
+!data/**
+
+# Jupyter exports
+*.nbconvert.html
+*_nbconvert.html
+* - Jupyter Notebook.html
+**/*_files/
