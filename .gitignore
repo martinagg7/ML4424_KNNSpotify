@@ -37,3 +37,4 @@ data/processed/
 *_nbconvert.html
 * - Jupyter Notebook.html
 **/*_files/
+data/
