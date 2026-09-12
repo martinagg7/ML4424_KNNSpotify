@@ -7,6 +7,7 @@ __pycache__/
 .venv/
 venv/
 ENV/
+.venv-music/
 
 # Project artifacts
 models/
@@ -38,3 +39,5 @@ data/processed/
 * - Jupyter Notebook.html
 **/*_files/
 data/
+
+.env

@@ -19,67 +19,231 @@ import os
 # ============================================================================
 
 class FeatureScaler:
-    """
-    TODO: Copy your complete FeatureScaler implementation here.
-    Must include: __init__, fit, transform, fit_transform methods
-    """
+    """A class to scale numerical features using Standard Scaling."""
     def __init__(self):
-        # Keep lightweight constructor so module import does not fail
-        self._fitted = False
-    
+        self.mean = None
+        self.std = None
+
     def fit(self, X):
-        """Learn the scaling parameters from data X."""
-        raise NotImplementedError("FeatureScaler.fit is a stub. Please implement it in utils/student_adapter.py")
-    
+        """
+        Learn mean and std for each feature in X.
+
+        Args:
+            X (np.ndarray): Shape (n_samples, n_features)
+
+        Sets:
+            self.mean: Mean per feature
+            self.std: Std per feature (replace 0 with 1)
+        """
+        # --- SOLUTION ---
+        self.mean = np.mean(X, axis=0)
+        self.std = np.std(X, axis=0)
+        self.std[self.std == 0] = 1
+
     def transform(self, X):
-        """Apply the learned scaling to data X."""
-        raise NotImplementedError("FeatureScaler.transform is a stub. Please implement it in utils/student_adapter.py")
-    
+        """
+        Apply scaling: (X - mean) / std
+
+        Args:
+            X (np.ndarray): Shape (n_samples, n_features)
+
+        Returns:
+            np.ndarray: Scaled data, same shape as X
+
+        Raises:
+            RuntimeError: If not fitted yet
+        """
+        if self.mean is None or self.std is None:
+            raise RuntimeError("Scaler has not been fitted yet. Call fit() first.")
+
+        return (X - self.mean) / self.std
     def fit_transform(self, X):
-        """Fit and transform in one step."""
-        raise NotImplementedError("FeatureScaler.fit_transform is a stub. Please implement it in utils/student_adapter.py")
+        """A convenience method to fit and transform in one step."""
+        self.fit(X)
+        return self.transform(X)
 
 
 class KNNRecommender:
-    """
-    TODO: Copy your complete KNNRecommender implementation here.
-    Must include all methods and static distance functions.
-    """
-    
+    """A k-Nearest Neighbors recommender for music."""
     def __init__(self, k=10):
-        # Keep constructor minimal so initialization paths do not crash immediately
         self.k = k
-        self._fitted = False
-    
+        self.item_profile = None
+        self.features_matrix = None
+        self.feature_columns = None
+        self.track_id_to_index = {}
+
     @staticmethod
     def euclidean_distance(a, b):
-        """Calculate Euclidean distance between vectors a and b."""
-        raise NotImplementedError("KNNRecommender.euclidean_distance is a stub. Please implement it in utils/student_adapter.py")
-    
+        """
+        Calculate Euclidean distance between two vectors.
+
+        Args:
+            a (np.ndarray): Vector of shape (n,)
+            b (np.ndarray): Vector of shape (n,)
+
+        Returns:
+            float: Euclidean distance
+
+        Example:
+            >>> euclidean_distance(np.array([1,2,3]), np.array([4,5,6]))
+            5.196152422706632
+        """
+        # --- SOLUTION ---
+        euclidean_distance=np.sqrt(np.sum((a-b)**2))
+        return euclidean_distance
+
     @staticmethod
     def cosine_distance(a, b):
-        """Calculate Cosine distance between vectors a and b."""
-        raise NotImplementedError("KNNRecommender.cosine_distance is a stub. Please implement it in utils/student_adapter.py")
-    
+        """
+        Calculates the Cosine distance between two numerical vectors a and b.
+        Formula: 1 - (a·b) / (||a|| * ||b||)
+
+        Args:
+            a (np.ndarray): Vector of shape (n,)
+            b (np.ndarray): Vector of shape (n,)
+
+        Returns:
+            float: Cosine distance (between 0 and 1)
+
+        Example:
+            >>> cosine_distance(np.array([1,2,3]), np.array([4,5,6]))
+            0.025368153802923787
+
+        Note: Return 1.0 if either vector has zero norm.
+        """
+        # --- SOLUTION ---
+        if np.linalg.norm(a)==0 or np.linalg.norm(b)==0:
+            return 1.0
+        else:
+            cosine_distance=1-(np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b)))
+            return cosine_distance
+
     def fit(self, item_profile_df, feature_columns):
-        """Prepare the recommender with track data."""
-        raise NotImplementedError("KNNRecommender.fit is a stub. Please implement it in utils/student_adapter.py")
-    
+        """Prepares the recommender by loading and processing the track data."""
+        self.item_profile = item_profile_df.reset_index(drop=True)
+        self.feature_columns = feature_columns
+        self.features_matrix = self.item_profile[self.feature_columns].values
+        self.track_id_to_index = {track_id: i for i, track_id in enumerate(self.item_profile['id'])}
+        print(f"Fit complete. Loaded {len(self.item_profile)} tracks.")
+
     def find_neighbors(self, track_id, n_neighbors=None, distance_metric='euclidean'):
-        """Find k nearest neighbors for a track."""
-        raise NotImplementedError("KNNRecommender.find_neighbors is a stub. Please implement it in utils/student_adapter.py")
-    
+        """
+        Find k nearest neighbors for a track.
+
+        Args:
+            track_id (str): Query track ID
+            n_neighbors (int): Number of neighbors (default: self.k)
+            distance_metric (str): 'euclidean' or 'cosine'
+
+        Returns:
+            list: [(distance, track_id), ...] sorted by distance
+
+        Example:
+            >>> neighbors = recommender.find_neighbors('track123', n_neighbors=5)
+            [(0.23, 'track456'), (0.31, 'track789'), ...]
+        """
+        if n_neighbors is None: n_neighbors = self.k
+        distance_functions = {'euclidean': self.euclidean_distance, 'cosine': self.cosine_distance}
+        if distance_metric not in distance_functions: raise ValueError(f"Unknown metric: {distance_metric}")
+        if track_id not in self.track_id_to_index: raise ValueError(f"Track ID {track_id} not found.")
+
+        # --- SOLUTION ---
+        distance_func = distance_functions[distance_metric]
+        query_index=self.track_id_to_index[track_id]
+
+        results=[]
+        for i, vector_search in enumerate(self.features_matrix):
+            if i == query_index:
+                continue
+            distance = distance_func(self.features_matrix[query_index], vector_search)
+            results.append((distance, self.item_profile.iloc[i]['id']))
+
+        results.sort(key=lambda x: x[0])
+        return results[:n_neighbors]
+
     def recommend(self, track_id, n_recommendations=None, distance_metric='euclidean'):
-        """Generate recommendations for a track."""
-        raise NotImplementedError("KNNRecommender.recommend is a stub. Please implement it in utils/student_adapter.py")
+        if self.item_profile is None: raise RuntimeError("Recommender has not been fitted.")
+        neighbors = self.find_neighbors(track_id, n_recommendations, distance_metric)
+        neighbor_ids = [tid for distance, tid in neighbors]
+        results_df = self.item_profile[self.item_profile['id'].isin(neighbor_ids)].copy()
+        distances_map = {tid: dist for dist, tid in neighbors}
+        results_df['distance'] = results_df['id'].map(distances_map)
+        return results_df.sort_values('distance')
 
 
-# Optional: If you implemented HybridKNNRecommender, add it here
+# We pass the full data rows now, in addition to the feature vectors
+def custom_hybrid_distance(track_a_data, track_b_data, audio_features_a, audio_features_b, w_artist=0.5):
+    """
+    Design your hybrid distance function here.
+
+    Args:
+        track_a_data (pd.Series): Full data row for track A
+        track_b_data (pd.Series): Full data row for track B
+        audio_features_a (np.ndarray): Audio feature vector for track A
+        audio_features_b (np.ndarray): Audio feature vector for track B
+        w_artist (float): Weight for metadata component (0-1)
+
+    Returns:
+        float: Combined distance value
+
+    Ideas to consider:
+        - Audio similarity (using cosine or euclidean distance)
+        - Artist similarity (same artist = lower distance)
+        - You could also consider: genre, year, popularity, etc.
+    """
+    # --- SOLUTION ---
+    audio_distance = KNNRecommender.cosine_distance(audio_features_a, audio_features_b)
+
+    if track_a_data['album'] == track_b_data['album']:
+        metadata_penalty = 0.0
+    elif track_a_data['artist'] == track_b_data['artist']:
+        metadata_penalty = 0.5
+    else:
+        metadata_penalty = 1.0
+
+    return (1 - w_artist) * audio_distance + w_artist * metadata_penalty
+
+
 class HybridKNNRecommender(KNNRecommender):
-    """
-    OPTIONAL: If you completed the hybrid distance implementation, copy it here.
-    """
-    pass
+    def find_neighbors(self, track_id, n_neighbors=None, distance_metric='hybrid', w_artist=0.5):
+        """
+        Find neighbors using hybrid distance that combines audio features and metadata.
+
+        This method extends the base KNNRecommender to use the custom_hybrid_distance
+        function when distance_metric='hybrid'.
+        """
+        if distance_metric != 'hybrid':
+            return super().find_neighbors(track_id, n_neighbors, distance_metric)
+
+        if n_neighbors is None:
+            n_neighbors = self.k
+
+        if track_id not in self.track_id_to_index:
+            raise ValueError(f"Track ID {track_id} not found.")
+
+        # --- SOLUTION ---
+        query_idx = self.track_id_to_index[track_id]
+        query_vector = self.features_matrix[query_idx]
+        query_data = self.item_profile.iloc[query_idx]
+
+        track_ids = self.item_profile['id'].values
+        artists = self.item_profile['artist'].values
+        albums = self.item_profile['album'].values
+
+        results = []
+        for i in range(len(self.features_matrix)):
+            if i == query_idx:
+                continue
+            other_data = {'artist': artists[i], 'album': albums[i]}
+            distance = custom_hybrid_distance(
+                query_data, other_data,
+                query_vector, self.features_matrix[i],
+                w_artist=w_artist
+            )
+            results.append((distance, track_ids[i]))
+
+        results.sort(key=lambda x: x[0])
+        return results[:n_neighbors]
 
 
 
